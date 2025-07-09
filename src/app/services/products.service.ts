@@ -16,7 +16,7 @@ export class ProductsService {
   private firestore = inject(Firestore);
 
   getProducts(): Observable<Product[]> {
-    const productsRef = collection(this.firestore, 'products');
+    const productsRef = collection(this.firestore, 'productos');
     return collectionData(productsRef, { idField: 'id' }) as Observable<Product[]>;
   }
 }

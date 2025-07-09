@@ -9,10 +9,22 @@
 @import "@ionic/angular/css/text-transformation.css";
 @import "@ionic/angular/css/flex-utils.css";
 @import "@ionic/angular/css/display.css";
+:root {
+  // General dark mode colors
+  --app-background-dark: #121212;
+  --card-background-dark: #1e1e1e;
+  --text-color-light: #ffffff;
+  --text-color-muted: #bbbbbb;
+  --app-logo-bg: #ffffff;
 
-// Puedes personalizar tus colores o variables aquí si deseas
+  // Primary button
+  --button-primary-bg: #1e60ff;
+  --button-primary-bg-hover: #3a86ff;
+  --button-shadow: 0 2px 12px rgba(30, 96, 255, 0.4);
 
-/* Global styles */
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  // Card shadow
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+
+  // Input focus
+  --input-focus-color: #3a86ff;
 }
