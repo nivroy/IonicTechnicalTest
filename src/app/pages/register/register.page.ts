@@ -1,50 +1,58 @@
 import { Component } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { AngularFireAuth } from '@angular/fire/compat/auth';
-import { NavController, ToastController, IonicModule } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { IonicModule, NavController, ToastController } from '@ionic/angular';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
-  selector: 'app-register',
   standalone: true,
+  selector: 'app-register',
   imports: [IonicModule, CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './register.page.html',
-  styleUrls: ['./register.page.scss'],
+  styleUrls: ['./register.page.scss']
 })
 export class RegisterPage {
-  registerForm: FormGroup;
+  form: FormGroup;
 
   constructor(
     private fb: FormBuilder,
-    private afAuth: AngularFireAuth,
+    private authService: AuthService,
     private navCtrl: NavController,
-    private toastCtrl: ToastController
+    private toastController: ToastController
   ) {
-    this.registerForm = this.fb.group({
+    this.form = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
+      password: ['', Validators.required],
+      confirmPassword: ['', Validators.required]
     });
   }
 
   async register() {
-    const { email, password } = this.registerForm.value;
+    if (this.form.invalid) {
+      this.presentToast('Completa todos los campos');
+      return;
+    }
+
+    const { email, password, confirmPassword } = this.form.value;
+    if (password !== confirmPassword) {
+      this.presentToast('Las contraseñas no coinciden');
+      return;
+    }
 
     try {
-      await this.afAuth.createUserWithEmailAndPassword(email, password);
-      const toast = await this.toastCtrl.create({
-        message: 'Usuario registrado con éxito',
-        duration: 2000,
-        color: 'success'
-      });
-      toast.present();
-      this.navCtrl.navigateRoot('/home');
-    } catch (error: any) {
-      const toast = await this.toastCtrl.create({
-        message: error.message || 'Error en el registro',
-        duration: 3000,
-        color: 'danger'
-      });
-      toast.present();
+      await this.authService.register(email, password);
+      this.navCtrl.navigateRoot('/');
+    } catch {
+      this.presentToast('Error al registrar');
     }
+  }
+
+  async presentToast(message: string) {
+    const toast = await this.toastController.create({
+      message,
+      duration: 2000,
+      color: 'danger',
+    });
+    toast.present();
   }
 }
