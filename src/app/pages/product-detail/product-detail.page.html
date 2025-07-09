@@ -1,0 +1,38 @@
+<ion-header>
+  <ion-toolbar color="dark">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/products"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Detalle de Producto</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ng-container *ngIf="product$ | async as product; else loading">
+    <ion-card class="product-card">
+      <img [src]="product.imagen" class="product-image" />
+      <ion-card-header>
+        <ion-card-title>{{ product.nombre }}</ion-card-title>
+        <ion-card-subtitle>
+          💲 {{ product.precio | currency:'USD':'symbol':'1.2-2' }}
+        </ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <p>{{ product.descripcion }}</p>
+        <p>📦 Stock: {{ product.stock }}</p>
+        <ion-button expand="block" color="primary" fill="outline" (click)="addToCart(product)">
+          <ion-icon slot="start" name="cart-outline"></ion-icon>
+          Agregar al carrito
+        </ion-button>
+        <ion-button expand="block" color="success" (click)="buyNow(product)">
+          <ion-icon slot="start" name="flash-outline"></ion-icon>
+          Comprar ahora
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
+  </ng-container>
+  <ng-template #loading>
+    <ion-spinner name="dots"></ion-spinner>
+    <p>Cargando...</p>
+  </ng-template>
+</ion-content>
