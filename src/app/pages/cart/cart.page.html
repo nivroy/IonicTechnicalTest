@@ -1,0 +1,56 @@
+<ion-header>
+  <ion-toolbar color="dark">
+    <ion-title>Carrito</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ng-container *ngIf="cartItems$ | async as items">
+    <ion-list *ngIf="items.length > 0; else empty">
+      <ion-item *ngFor="let item of items">
+        <ion-thumbnail slot="start">
+          <img [src]="item.imagen" />
+        </ion-thumbnail>
+        <ion-label>
+          <h2>{{ item.nombre }}</h2>
+          <p>Precio: {{ item.precio | currency:'USD':'symbol':'1.2-2' }}</p>
+          <p>Cantidad: {{ item.cantidad }}</p>
+          <p>Total: {{ item.precio * item.cantidad | currency:'USD':'symbol':'1.2-2' }}</p>
+        </ion-label>
+        <ion-button fill="clear" color="danger" (click)="removeItem(item.productId)">
+          <ion-icon slot="icon-only" name="trash"></ion-icon>
+        </ion-button>
+      </ion-item>
+    </ion-list>
+    <ng-template #empty>
+      <div class="ion-text-center ion-padding">
+        Tu carrito está vacío.
+      </div>
+    </ng-template>
+  </ng-container>
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <ion-title>Total: {{ total$ | async | currency:'USD':'symbol':'1.2-2' }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button color="danger" (click)="clearCart()">Vaciar carrito</ion-button>
+      <ion-button color="success" (click)="checkout()">Confirmar compra</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button routerLink="/products">
+        <ion-icon slot="icon-only" name="pricetag-outline"></ion-icon>
+      </ion-button>
+      <ion-button routerLink="/cart">
+        <ion-icon slot="icon-only" name="cart-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-buttons slot="end">
+      <ion-button (click)="logout()">
+        <ion-icon slot="icon-only" name="log-out-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-footer>
