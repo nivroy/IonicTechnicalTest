@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 import { NavController, ToastController } from '@ionic/angular';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { AuthService } from '../services/auth.service';
+import { RouterModule } from '@angular/router';
+import { AuthService } from 'src/app/services/auth.service';
 import { IonicModule } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -9,7 +10,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 @Component({
   standalone: true,
   selector: 'app-login',
-  imports: [IonicModule, CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [IonicModule, CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
   templateUrl: './login.page.html',
   styleUrls: ['./login.page.scss']
 })
@@ -51,5 +52,8 @@ export class LoginPage {
       color: 'danger',
     });
     toast.present();
+  }
+  goToRegister() {
+    this.navCtrl.navigateForward('/register');
   }
 }
