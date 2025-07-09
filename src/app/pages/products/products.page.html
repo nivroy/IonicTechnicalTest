@@ -7,7 +7,7 @@
 <ion-content class="ion-padding">
   <ng-container *ngIf="products$ | async as products; else loading">
     <ng-container *ngIf="products.length > 0; else noProducts">
-      <ion-card *ngFor="let product of products" class="product-card">
+      <ion-card *ngFor="let product of products" class="product-card" [routerLink]="'/product/' + product.id">
         <img [src]="product.imagen" class="product-image" />
 
         <ion-card-header>
@@ -21,12 +21,12 @@
           <p>{{ product.descripcion }}</p>
           <p>📦 Stock: {{ product.stock }}</p>
 
-          <ion-button expand="block" color="primary" fill="outline" (click)="addToCart(product)">
+          <ion-button expand="block" color="primary" fill="outline" (click)="addToCart(product); $event.stopPropagation()">
             <ion-icon slot="start" name="cart-outline"></ion-icon>
             Agregar al carrito
           </ion-button>
 
-          <ion-button expand="block" color="success" (click)="buyNow(product)">
+          <ion-button expand="block" color="success" (click)="buyNow(product); $event.stopPropagation()">
             <ion-icon slot="start" name="flash-outline"></ion-icon>
             Comprar ahora
           </ion-button>

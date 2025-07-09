@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { Firestore, collection, collectionData } from '@angular/fire/firestore';
-import { Observable } from 'rxjs';
+import { Firestore, collection, collectionData, doc, getDoc } from '@angular/fire/firestore';
+import { Observable, from, map } from 'rxjs';
 
 export interface Product {
   nombre: string;
@@ -18,5 +18,12 @@ export class ProductsService {
   getProducts(): Observable<Product[]> {
     const productsRef = collection(this.firestore, 'productos');
     return collectionData(productsRef, { idField: 'id' }) as Observable<Product[]>;
+  }
+
+  getProductById(id: string): Observable<Product | undefined> {
+    const productRef = doc(this.firestore, 'productos', id);
+    return from(getDoc(productRef)).pipe(
+      map(snapshot => (snapshot.exists() ? { id: snapshot.id, ...(snapshot.data() as Omit<Product, 'id'>) } as Product : undefined))
+    );
   }
 }

@@ -17,6 +17,9 @@
           <p class="item-info">Cantidad: {{ item.cantidad }}</p>
           <p class="item-info">Total: {{ item.precio * item.cantidad | currency:'USD' }}</p>
         </ion-label>
+        <ion-button fill="clear" [routerLink]="'/product/' + item.productId">
+          <ion-icon slot="icon-only" name="eye-outline"></ion-icon>
+        </ion-button>
         <ion-button fill="clear" color="danger" (click)="removeItem(item.productId)">
           <ion-icon slot="icon-only" name="trash"></ion-icon>
         </ion-button>
