@@ -1,9 +1,6 @@
 <ion-header>
   <ion-toolbar color="dark">
     <ion-title>Productos</ion-title>
-    <ion-buttons slot="end">
-      <ion-button (click)="logout()" color="light">Cerrar sesión</ion-button>
-    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -24,12 +21,12 @@
           <p>{{ product.descripcion }}</p>
           <p>📦 Stock: {{ product.stock }}</p>
 
-          <ion-button expand="block" color="primary" fill="outline">
+          <ion-button expand="block" color="primary" fill="outline" (click)="addToCart(product)">
             <ion-icon slot="start" name="cart-outline"></ion-icon>
             Agregar al carrito
           </ion-button>
 
-          <ion-button expand="block" color="success">
+          <ion-button expand="block" color="success" (click)="buyNow(product)">
             <ion-icon slot="start" name="flash-outline"></ion-icon>
             Comprar ahora
           </ion-button>
@@ -49,3 +46,21 @@
     <p>Cargando...</p>
   </ng-template>
 </ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button routerLink="/products">
+        <ion-icon slot="icon-only" name="pricetag-outline"></ion-icon>
+      </ion-button>
+      <ion-button routerLink="/cart">
+        <ion-icon slot="icon-only" name="cart-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-buttons slot="end">
+      <ion-button (click)="logout()">
+        <ion-icon slot="icon-only" name="log-out-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-footer>
