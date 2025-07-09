@@ -35,7 +35,7 @@ export class LoginPage {
 
     try {
       await this.authService.login(email, password);
-      this.navCtrl.navigateRoot('/cart');
+      this.navCtrl.navigateRoot('/products');
     } catch (e) {
       this.presentToast('Credenciales inválidas');
     }

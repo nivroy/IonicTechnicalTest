@@ -48,3 +48,29 @@ body {
   background-color: var(--app-logo-bg);
   padding: 10px;
 }
+
+.nav-buttons {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 100%;
+}
+.nav-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 12px;
+}
+
+.nav-button ion-button {
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-top: 0;
+  --padding-bottom: 0;
+  margin-bottom: 2px;
+}
+
+.nav-button p {
+  margin: 0;
+  color: var(--ion-color-medium);
+}
