@@ -4,6 +4,7 @@ import { IonicModule, AlertController, ToastController } from '@ionic/angular';
 import { ProductsService, Product } from '../../services/products.service';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
+import { RouterModule } from '@angular/router';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
 
@@ -12,7 +13,7 @@ import { Observable } from 'rxjs';
   selector: 'app-products',
   templateUrl: './products.page.html',
   styleUrls: ['./products.page.scss'],
-  imports: [IonicModule, CommonModule],
+  imports: [IonicModule, CommonModule, RouterModule],
 })
 export class ProductsPage implements OnInit {
   private productsService = inject(ProductsService);

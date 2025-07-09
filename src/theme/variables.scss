@@ -9,22 +9,22 @@
 @import "@ionic/angular/css/text-transformation.css";
 @import "@ionic/angular/css/flex-utils.css";
 @import "@ionic/angular/css/display.css";
+
+
 :root {
-  // General dark mode colors
-  --app-background-dark: #121212;
-  --card-background-dark: #1e1e1e;
-  --text-color-light: #ffffff;
-  --text-color-muted: #bbbbbb;
-  --app-logo-bg: #ffffff;
+  /* tus variables actuales... */
+  
+  /* Recomendado: definir colores del sistema Ionic */
+  --ion-color-light: #ffffff;
+  --ion-color-dark: #121212;
+  --ion-color-primary: #1e60ff;
+  --ion-color-medium: #bbbbbb;
 
-  // Primary button
-  --button-primary-bg: #1e60ff;
-  --button-primary-bg-hover: #3a86ff;
-  --button-shadow: 0 2px 12px rgba(30, 96, 255, 0.4);
+  /* Íconos y contenido en toolbar oscuro */
+  --ion-toolbar-background: var(--ion-color-dark);
+  --ion-toolbar-color: var(--ion-color-light); /* <-- esto afecta los íconos */
 
-  // Card shadow
-  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-
-  // Input focus
-  --input-focus-color: #3a86ff;
+  /* Si usas dark mode explícito */
+  --ion-background-color: var(--app-background-dark);
+  --ion-text-color: var(--text-color-light);
 }
