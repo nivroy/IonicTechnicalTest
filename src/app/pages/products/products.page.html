@@ -1,0 +1,36 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Productos</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="logout()">Cerrar sesión</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ng-container *ngIf="products$ | async as products; else loading">
+    <ng-container *ngIf="products.length > 0; else noProducts">
+      <ion-card *ngFor="let product of products">
+        <img [src]="product.imagen" />
+        <ion-card-header>
+          <ion-card-title>{{ product.nombre }}</ion-card-title>
+          <ion-card-subtitle>
+            Precio: {{ product.precio | currency:'USD':'symbol':'1.2-2' }}
+          </ion-card-subtitle>
+        </ion-card-header>
+        <ion-card-content>
+          <p>{{ product.descripcion }}</p>
+          <p>Stock: {{ product.stock }}</p>
+          <ion-button expand="block" color="primary">Agregar al carrito</ion-button>
+          <ion-button expand="block" color="success">Comprar ahora</ion-button>
+        </ion-card-content>
+      </ion-card>
+    </ng-container>
+    <ng-template #noProducts>
+      <p>No hay productos disponibles.</p>
+    </ng-template>
+  </ng-container>
+  <ng-template #loading>
+    <p>Cargando...</p>
+  </ng-template>
+</ion-content>

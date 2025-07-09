@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Auth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from '@angular/fire/auth';
 import { authState } from '@angular/fire/auth';
 import { Observable } from 'rxjs';
@@ -8,7 +8,7 @@ import { map } from 'rxjs/operators';
   providedIn: 'root'
 })
 export class AuthService {
-  constructor(private auth: Auth) {}
+  private auth = inject(Auth);
 
   login(email: string, password: string) {
     return signInWithEmailAndPassword(this.auth, email, password);

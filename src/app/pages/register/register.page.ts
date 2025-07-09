@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { IonicModule, NavController, ToastController } from '@ionic/angular';
@@ -12,20 +12,16 @@ import { AuthService } from '../../services/auth.service';
   styleUrls: ['./register.page.scss']
 })
 export class RegisterPage {
-  form: FormGroup;
+  private fb = inject(FormBuilder);
+  private authService = inject(AuthService);
+  private navCtrl = inject(NavController);
+  private toastController = inject(ToastController);
 
-  constructor(
-    private fb: FormBuilder,
-    private authService: AuthService,
-    private navCtrl: NavController,
-    private toastController: ToastController
-  ) {
-    this.form = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', Validators.required],
-      confirmPassword: ['', Validators.required]
-    });
-  }
+  form: FormGroup = this.fb.group({
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', Validators.required],
+    confirmPassword: ['', Validators.required]
+  });
 
   async register() {
     if (this.form.invalid) {
@@ -54,5 +50,4 @@ export class RegisterPage {
       color: 'danger',
     });
     toast.present();
-  }
-}
+  }}

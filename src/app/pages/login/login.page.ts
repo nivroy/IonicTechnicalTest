@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { NavController, ToastController } from '@ionic/angular';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -15,19 +15,15 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
   styleUrls: ['./login.page.scss']
 })
 export class LoginPage {
-  form: FormGroup;
+  private fb = inject(FormBuilder);
+  private authService = inject(AuthService);
+  private navCtrl = inject(NavController);
+  private toastController = inject(ToastController);
 
-  constructor(
-    private fb: FormBuilder,
-    private authService: AuthService,
-    private navCtrl: NavController,
-    private toastController: ToastController
-  ) {
-    this.form = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', Validators.required]
-    });
-  }
+  form: FormGroup = this.fb.group({
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', Validators.required]
+  });
 
   async login() {
     if (this.form.invalid) {
