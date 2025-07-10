@@ -6,11 +6,13 @@ ion-content {
 }
 
 .login-container {
-  width: 100%;
-  max-width: 360px;
-  margin: auto;
-  padding: 20px;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  box-sizing: border-box;
 }
 
 .logo {
@@ -23,12 +25,25 @@ ion-content {
 }
 
 .login-card {
-  --background: var(--card-background-dark);
-  --color: var(--text-color-light);
+  width: 100%;
+  max-width: 500px;
   border-radius: 20px;
-  box-shadow: var(--card-shadow);
-}
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+  font-size: 16px;
+  background-color: var(--ion-card-background, #ffffff);
+  color: var(--ion-text-color, #000000);
 
+  ion-item {
+    --background: transparent;
+    width: 100%;
+    margin-bottom: 4px;
+    box-sizing: border-box;
+  }
+
+  ion-input {
+    width: 100%;
+  }
+}
 ion-card-title {
   font-size: 1.5rem;
   font-weight: bold;
@@ -44,21 +59,4 @@ ion-item {
 
 ion-label {
   color: var(--text-color-muted);
-}
-
-ion-input {
-  color: var(--text-color-light);
-}
-
-ion-button {
-  --background: var(--button-primary-bg);
-  --border-radius: 12px;
-  --box-shadow: var(--button-shadow);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-weight: 600;
-}
-
-ion-button:hover {
-  --background: var(--button-primary-bg-hover);
 }

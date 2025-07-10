@@ -7,6 +7,18 @@ import { CartService } from '../../services/cart.service';
 import { RouterModule } from '@angular/router';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
+import { addIcons } from 'ionicons';
+import {
+  pricetagOutline,
+  cartOutline,
+  logOutOutline
+} from 'ionicons/icons';
+
+addIcons({
+  'pricetag-outline': pricetagOutline,
+  'cart-outline': cartOutline,
+  'log-out-outline': logOutOutline
+});
 
 @Component({
   standalone: true,
@@ -51,5 +63,8 @@ export class ProductsPage implements OnInit {
       buttons: ['OK'],
     });
     await alert.present();
+  }
+  goToProductDetail(product: Product) {
+    this.router.navigate(['/product', product.id]);
   }
 }

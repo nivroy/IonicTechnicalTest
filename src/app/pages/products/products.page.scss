@@ -27,3 +27,10 @@ ion-button {
   border-radius: 12px;
   object-fit: cover;
 }
+.nav-toolbar {
+  padding-bottom: env(safe-area-inset-bottom);
+  background-color: #121212; /* o el color que uses */
+}
+ion-content {
+  padding-bottom: calc(56px + env(safe-area-inset-bottom)); /* 56px si tu toolbar tiene ese alto */
+}

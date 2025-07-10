@@ -1,7 +1,7 @@
 .login-card {
   width: 100%;
   max-width: 500px;
-  padding: 24px;
+  padding: 8px;
   border-radius: 20px;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
   font-size: 16px;
@@ -10,10 +10,6 @@
 
   ion-item {
     --background: transparent;
-    --highlight-color-focused: var(--ion-color-primary);
-    --border-radius: 12px;
-    --padding-start: 12px;
-    --padding-end: 12px;
     width: 100%;
     margin-bottom: 12px;
     box-sizing: border-box;
@@ -23,6 +19,7 @@
     width: 100%;
   }
 }
+
 .login-container {
   display: flex;
   flex-direction: column;

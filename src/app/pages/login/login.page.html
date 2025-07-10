@@ -1,4 +1,4 @@
-<ion-content [scrollEvents]="true" keyboard-avoidance="enabled" fullscreen="true" class="ion-padding">
+<ion-content [scrollEvents]="true" class="ion-padding" scrollY="true">
   <div class="login-container">
     <img src="assets/logo.png" class="logo" alt="Logo" />
 
@@ -23,13 +23,12 @@
             Entrar
           </ion-button>
         </form>
-        <ion-text class="ion-text-center ion-margin-top">
-          <p>
-            ¿No tienes una cuenta?
-            <ion-button fill="clear" size="small" routerLink="/register">Regístrate</ion-button>
-          </p>
-        </ion-text>
-
+       <div class="ion-text-center ion-margin-top">
+          <p>¿No tienes una cuenta?</p>
+          <ion-button fill="clear" size="small" routerLink="/register" color="primary">
+            Regístrate
+          </ion-button>
+        </div>
       </ion-card-content>
     </ion-card>
   </div>
