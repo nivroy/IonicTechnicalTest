@@ -5,6 +5,7 @@ import { ActivatedRoute, RouterModule } from '@angular/router';
 import { Observable } from 'rxjs';
 import { ProductsService, Product } from '../../services/products.service';
 import { CartService } from '../../services/cart.service';
+import { Network } from '@capacitor/network';
 
 @Component({
   standalone: true,
@@ -39,6 +40,16 @@ export class ProductDetailPage implements OnInit {
   }
 
   async buyNow(product: Product) {
+    const status = await Network.getStatus();
+    if (!status.connected) {
+      const alert = await this.alertCtrl.create({
+        header: 'Sin conexión',
+        message: 'Necesitas conexión a internet para completar tu compra.',
+        buttons: ['OK'],
+      });
+      await alert.present();
+      return;
+    }
     await this.cartService.removeItem(product.id!);
     const alert = await this.alertCtrl.create({
       header: 'Compra',

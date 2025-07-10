@@ -6,6 +6,8 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { CartService, CartItem } from '../../services/cart.service';
 import { AuthService } from '../../services/auth.service';
+import { SyncService } from '../../services/sync.service';
+import { Network } from '@capacitor/network';
 
 @Component({
   standalone: true,
@@ -19,6 +21,7 @@ export class CartPage implements OnInit {
   private authService = inject(AuthService);
   private router = inject(Router);
   private alertCtrl = inject(AlertController);
+  private sync = inject(SyncService);
 
   cartItems$!: Observable<CartItem[]>;
   total$!: Observable<number>;
@@ -39,6 +42,16 @@ export class CartPage implements OnInit {
   }
 
   async checkout() {
+    const online = await Network.getStatus();
+    if (!online.connected) {
+      const alert = await this.alertCtrl.create({
+        header: 'Sin conexión',
+        message: 'Necesitas conexión a internet para completar tu compra.',
+        buttons: ['OK'],
+      });
+      await alert.present();
+      return;
+    }
     const alert = await this.alertCtrl.create({
       header: 'Compra',
       message: 'Compra realizada con éxito',

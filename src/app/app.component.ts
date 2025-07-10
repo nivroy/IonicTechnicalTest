@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
 import { RouterModule } from '@angular/router'; // 👈 importa esto
+import { SyncService } from './services/sync.service';
 
 @Component({
   selector: 'app-root',
@@ -13,5 +14,6 @@ import { RouterModule } from '@angular/router'; // 👈 importa esto
   ],
 })
 export class AppComponent {
+  private _sync = inject(SyncService);
   constructor() {}
 }
