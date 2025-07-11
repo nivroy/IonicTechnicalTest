@@ -1,32 +1,52 @@
+// src/app/repositories/cart.repository.ts
+
 import { Injectable, inject } from '@angular/core';
 import { Auth, authState } from '@angular/fire/auth';
-import { Firestore, doc, setDoc, deleteDoc, getDocs, collection } from '@angular/fire/firestore';
+import { Firestore, doc, setDoc, deleteDoc, getDocs, collection, onSnapshot } from '@angular/fire/firestore';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Product } from '../models/product.model';
 import { CartItem } from '../models/cart-item.model';
 import { Capacitor } from '@capacitor/core';
 import { Network } from '@capacitor/network';
-import { SQLiteConnection, SQLiteDBConnection, CapacitorSQLite } from '@capacitor-community/sqlite';
-import localforage from 'localforage';
+import { SQLiteConnection } from '@capacitor-community/sqlite';
+import { CapacitorSQLite } from '@capacitor-community/sqlite';
+
+import { LocalCartStorage } from '../services/storeage';
+import { WebCartStorage } from '../services/storeage';
+import { SQLiteCartStorage } from '../services/storeage';
 import { onAuthStateChanged } from 'firebase/auth';
 
 @Injectable({ providedIn: 'root' })
 export class CartRepository {
   private firestore = inject(Firestore);
   private auth = inject(Auth);
+  private localStorage: LocalCartStorage | null = null;
 
   private sqlite: SQLiteConnection | null = null;
-  private db: SQLiteDBConnection | null = null;
-  private dbName = '';
   private cartItems$ = new BehaviorSubject<CartItem[]>([]);
+  private unsubscribeFirestoreListener?: () => void;
 
   constructor() {
     authState(this.auth).subscribe(async user => {
       if (user) {
-        await this.loadLocalCart(user.uid);
+        const platform = Capacitor.getPlatform();
+
+        if (platform === 'web') {
+          this.localStorage = new WebCartStorage(user.uid);
+        } else {
+          this.sqlite = new SQLiteConnection(CapacitorSQLite);
+          this.localStorage = new SQLiteCartStorage(user.uid, this.sqlite);
+        }
+
+        const items = await this.localStorage.getItems();
+        this.cartItems$.next(items);
+
+        await this.startRealtimeSync(user.uid);
+
         this.sync();
       } else {
         this.cartItems$.next([]);
+        this.localStorage = null;
         await this.closeDb();
       }
     });
@@ -42,270 +62,27 @@ export class CartRepository {
     return user.uid;
   }
 
-  private async getStore(uid: string) {
-    return localforage.createInstance({ name: 'cart', storeName: `cart_${uid}` });
-  }
-
-  private async getMetaStore(uid: string) {
-    return localforage.createInstance({ name: 'cart_meta', storeName: `cart_meta_${uid}` });
-  }
-
-
-  
-  private async openDb(uid: string): Promise<SQLiteDBConnection> {
-    if (!this.sqlite) {
-      this.sqlite = new SQLiteConnection(CapacitorSQLite);
-    }
-
-    const dbName = `cart_${uid}`;
-
-    if (this.db && this.dbName === dbName) {
-      return this.db;
-    }
-
-    try {
-      const isConn = (await this.sqlite.isConnection(dbName, false)).result;
-
-      if (isConn) {
-        // Recupera la conexión si ya existe
-        this.db = await this.sqlite.retrieveConnection(dbName, false);
-      } else {
-        // Si no existe, crea una nueva
-        this.db = await this.sqlite.createConnection(dbName, false, 'no-encryption', 1, false);
-      }
-
-      this.dbName = dbName;
-
-      await this.db.open();
-
-      await this.db.execute(
-        `CREATE TABLE IF NOT EXISTS items (
-          productId TEXT PRIMARY KEY,
-          name TEXT,
-          price REAL,
-          image TEXT,
-          quantity INTEGER,
-          updatedAt INTEGER,
-          deleted INTEGER
-        )`
-      );
-      await this.db.execute(
-        `CREATE TABLE IF NOT EXISTS pending_sync (
-          productId TEXT PRIMARY KEY
-        )`
-      );
-
-      return this.db;
-    } catch (error) {
-      console.error('Error opening DB, intentando limpiar:', error);
-
-      // Intentamos cerrar si algo salió mal
-      try {
-        await this.sqlite.closeConnection(dbName, false);
-      } catch (e) {
-        console.warn('No se pudo cerrar la conexión corrupta:', e);
-      }
-
-      // Reintenta creando una nueva conexión
-      try {
-        this.db = await this.sqlite.createConnection(dbName, false, 'no-encryption', 1, false);
-        this.dbName = dbName;
-
-        await this.db.open();
-
-        await this.db.execute(
-          `CREATE TABLE IF NOT EXISTS items (
-            productId TEXT PRIMARY KEY,
-            name TEXT,
-            price REAL,
-            image TEXT,
-            quantity INTEGER,
-            updatedAt INTEGER,
-            deleted INTEGER
-          )`
-        );
-        await this.db.execute(
-          `CREATE TABLE IF NOT EXISTS pending_sync (
-            productId TEXT PRIMARY KEY
-          )`
-        );
-
-        return this.db;
-      } catch (finalError) {
-        console.error('Error final al abrir DB después de limpiar:', finalError);
-        throw finalError;
-      }
-    }
-  }
-
-
-  private async loadLocalCart(uid: string) {
-    if (Capacitor.getPlatform() === 'web') {
-      const store = await this.getStore(uid);
-      const keys = await store.keys();
-      const items = (
-        await Promise.all(
-          keys.map((k: string) => store.getItem<CartItem>(k))
-        )
-      ).filter((i: CartItem | null): i is CartItem => !!i && !i.deleted);
-      this.cartItems$.next(items);
-    } else {
-      const db = await this.openDb(uid);
-      const res = await db.query('SELECT * FROM items WHERE deleted != 1 OR deleted IS NULL');
-      this.cartItems$.next((res.values as CartItem[]) || []);
-    }
-  }
-
-  private async saveItemLocal(uid: string, item: CartItem) {
-    if (Capacitor.getPlatform() === 'web') {
-      const store = await this.getStore(uid);
-      await store.setItem(item.productId, item);
-    } else {
-      const db = await this.openDb(uid);
-      await db.run(
-        'INSERT OR REPLACE INTO items (productId, name, price, image, quantity, updatedAt, deleted) VALUES (?,?,?,?,?,?,?)',
-        [item.productId, item.name, item.price, item.image, item.quantity, item.updatedAt, item.deleted ? 1 : 0]
-      );
-    }
-  }
-
-  private async removeItemLocal(uid: string, productId: string) {
-    if (Capacitor.getPlatform() === 'web') {
-      const store = await this.getStore(uid);
-      await store.removeItem(productId);
-    } else {
-      const db = await this.openDb(uid);
-      await db.run('DELETE FROM items WHERE productId = ?', [productId]);
-    }
-  }
-
-  private async clearLocal(uid: string) {
-    if (Capacitor.getPlatform() === 'web') {
-      const store = await this.getStore(uid);
-      await store.clear();
-    } else {
-      const db = await this.openDb(uid);
-      await db.execute('DELETE FROM items');
-    }
-  }
-
-  private async closeDb() {
-    if (this.db) {
-      await this.sqlite?.closeConnection(this.dbName, false);
-      this.db = null;
-    }
-  }
-
-  private async addPending(uid: string, productId: string) {
-    if (Capacitor.getPlatform() === 'web') {
-      const store = await this.getMetaStore(uid);
-      const pending: string[] = (await store.getItem('pendingSync')) ?? [];
-      if (!pending.includes(productId)) {
-        pending.push(productId);
-        await store.setItem('pendingSync', pending);
-      }
-    } else {
-      const db = await this.openDb(uid);
-      await db.run('INSERT OR IGNORE INTO pending_sync (productId) VALUES (?)', [productId]);
-    }
-  }
-
-  private async getPending(uid: string): Promise<string[]> {
-    if (Capacitor.getPlatform() === 'web') {
-      const store = await this.getMetaStore(uid);
-      return (await store.getItem<string[]>('pendingSync')) ?? [];
-    } else {
-      const db = await this.openDb(uid);
-      const res = await db.query('SELECT productId FROM pending_sync');
-      return (res.values || []).map((r: any) => r.productId as string);
-    }
-  }
-
-  private async clearPending(uid: string, productId: string) {
-    if (Capacitor.getPlatform() === 'web') {
-      const store = await this.getMetaStore(uid);
-      const pending: string[] = (await store.getItem('pendingSync')) ?? [];
-      const idx = pending.indexOf(productId);
-      if (idx >= 0) {
-        pending.splice(idx, 1);
-        await store.setItem('pendingSync', pending);
-      }
-    } else {
-      const db = await this.openDb(uid);
-      await db.run('DELETE FROM pending_sync WHERE productId = ?', [productId]);
-    }
-  }
-
   private async isOnline(): Promise<boolean> {
     const status = await Network.getStatus();
     return status.connected;
   }
 
-  async addToCart(product: Product) {
-    const uid = await this.getUid();
-    const items = [...this.cartItems$.value];
-    const existing = items.find(i => i.productId === product.id);
-    const now = Date.now();
-    if (existing) {
-      existing.quantity++;
-      existing.updatedAt = now;
-      existing.deleted = false;
-      await this.saveItemLocal(uid, existing);
-    } else {
-      const item: CartItem = {
-        productId: product.id!,
-        name: product.nombre,
-        price: product.precio,
-        image: product.imagen,
-        quantity: 1,
-        updatedAt: now,
-      };
-      items.push(item);
-      await this.saveItemLocal(uid, item);
-    }
-    await this.addPending(uid, product.id!);
-    this.cartItems$.next(items);
-    if (await this.isOnline()) {
-      await this.sync();
+  private async closeDb() {
+    try {
+      const platform = Capacitor.getPlatform();
+      if (platform !== 'web' && this.sqlite && this.localStorage instanceof SQLiteCartStorage) {
+        await this.sqlite.closeConnection(`cart_${await this.getUid()}`, false);
+      }
+    } catch (e) {
+      console.warn('Error closing SQLite connection:', e);
     }
   }
 
-  async removeItem(productId: string) {
-    const uid = await this.getUid();
-    const items = [...this.cartItems$.value];
-    const item = items.find(i => i.productId === productId);
-    if (!item) return;
-    item.deleted = true;
-    item.updatedAt = Date.now();
-    await this.saveItemLocal(uid, item);
-    await this.addPending(uid, productId);
-    this.cartItems$.next(items.filter(i => !i.deleted));
-    if (await this.isOnline()) {
-      await this.sync();
-    }
-  }
-
-  async clearCart() {
-    const uid = await this.getUid();
-    const now = Date.now();
-    const items = [...this.cartItems$.value];
-    for (const item of items) {
-      item.deleted = true;
-      item.updatedAt = now;
-      await this.saveItemLocal(uid, item);
-      await this.addPending(uid, item.productId);
-    }
-    this.cartItems$.next([]);
-    if (await this.isOnline()) {
-      await this.sync();
-    }
-  }
   async waitForAuth(timeoutMs = 5000): Promise<void> {
     const start = Date.now();
 
     return new Promise<void>((resolve, reject) => {
       const unsubscribe = onAuthStateChanged(this.auth, user => {
-        console.log('Auth state changed:', user);
         if (user) {
           unsubscribe();
           resolve();
@@ -315,7 +92,6 @@ export class CartRepository {
         }
       });
 
-      // Fallback timeout
       setTimeout(() => {
         unsubscribe();
         reject(new Error('Auth state timeout'));
@@ -323,52 +99,168 @@ export class CartRepository {
     });
   }
 
+  async addToCart(product: Product) {
+    if (!product.id) throw new Error('Product ID is missing');
+
+    const uid = await this.getUid();
+    const now = Date.now();
+    const currentItems = await this.localStorage!.getItems();
+
+    const existing = currentItems.find(i => i.productId === product.id);
+
+    if (existing) {
+      existing.quantity++;
+      existing.updatedAt = now;
+      existing.deleted = false;
+      await this.localStorage!.saveItem(existing);
+    } else {
+      const item: CartItem = {
+        productId: product.id,
+        name: product.nombre,
+        price: product.precio,
+        image: product.imagen,
+        quantity: 1,
+        updatedAt: now,
+      };
+      await this.localStorage!.saveItem(item);
+    }
+
+    await this.localStorage!.addPending(product.id);
+
+    const updatedItems = await this.localStorage!.getItems();
+    this.cartItems$.next(updatedItems);
+
+    if (await this.isOnline()) {
+      await this.sync();
+    }
+  }
+
+  async removeItem(productId: string) {
+    const uid = await this.getUid();
+    const now = Date.now();
+
+    const items = await this.localStorage!.getItems();
+    const item = items.find(i => i.productId === productId);
+    if (!item) return;
+
+    item.deleted = true;
+    item.updatedAt = now;
+
+    await this.localStorage!.saveItem(item);
+    await this.localStorage!.addPending(productId);
+
+    const updatedItems = await this.localStorage!.getItems();
+    this.cartItems$.next(updatedItems.filter(i => !i.deleted));
+
+    if (await this.isOnline()) {
+      await this.sync();
+    }
+  }
+
+  async clearCart() {
+    const uid = await this.getUid();
+    const now = Date.now();
+
+    const items = await this.localStorage!.getItems();
+
+    for (const item of items) {
+      item.deleted = true;
+      item.updatedAt = now;
+      await this.localStorage!.saveItem(item);
+      await this.localStorage!.addPending(item.productId);
+    }
+
+    this.cartItems$.next([]);
+
+    if (await this.isOnline()) {
+      await this.sync();
+    }
+  }
+
+  private async startRealtimeSync(uid: string) {
+    const itemsRef = collection(this.firestore, 'carts', uid, 'items');
+
+    this.unsubscribeFirestoreListener?.();
+
+    this.unsubscribeFirestoreListener = onSnapshot(itemsRef, async snapshot => {
+      if (!this.localStorage) return;
+
+      const pending = await this.localStorage.getPending();
+      if (pending.length > 0) {
+        console.log('[CartRepository] Hay cambios pendientes, ignorando snapshot remoto temporalmente.');
+        return;
+      }
+
+      const remoteItems: CartItem[] = [];
+      snapshot.forEach(doc => {
+        const item = doc.data() as CartItem;
+        if (!item.deleted) {
+          remoteItems.push(item);
+        }
+      });
+
+      for (const item of remoteItems) {
+        await this.localStorage.saveItem(item);
+      }
+
+      this.cartItems$.next(remoteItems);
+    });
+  }
+
+
   async sync() {
     try {
       if (!(await this.isOnline())) return;
-
       await this.waitForAuth();
-
       const uid = await this.getUid();
-      const pending = await this.getPending(uid);
+
+      const pending = await this.localStorage!.getPending();
+
+      // 🔧 Usamos getAllItems con includeDeleted = true
+      const allItems = await (this.localStorage as LocalCartStorage).getAllItems?.(true) ?? [];
 
       for (const id of pending) {
-        const store = await this.getStore(uid);
-        const item = await store.getItem<CartItem>(id);
+        const item = allItems.find((i: CartItem) => i.productId === id);
+
         if (item) {
           if (item.deleted) {
             await deleteDoc(doc(this.firestore, 'carts', uid, 'items', id));
-            await this.removeItemLocal(uid, id);
+            await this.localStorage!.removeItem(id);
           } else {
             await setDoc(doc(this.firestore, 'carts', uid, 'items', id), item);
           }
         }
-        await this.clearPending(uid, id);
+
+        await this.localStorage!.clearPending(id);
       }
 
+      // 🔄 Luego continuamos la sincronización cruzada normal
       const itemsRef = collection(this.firestore, 'carts', uid, 'items');
       const snapshot = await getDocs(itemsRef);
+
       const remoteMap = new Map<string, CartItem>();
       snapshot.forEach(d => remoteMap.set(d.id, d.data() as CartItem));
 
-      const localStoreItems = await this.getStore(uid).then(store => store.keys().then(keys => Promise.all(keys.map(k => store.getItem<CartItem>(k)))));
+      const localItems = await this.localStorage!.getItems();
       const localMap = new Map<string, CartItem>();
-      for (const it of localStoreItems.filter((i: CartItem | null): i is CartItem => !!i)) {
-        localMap.set(it.productId, it);
+      for (const item of localItems) {
+        localMap.set(item.productId, item);
       }
 
       for (const [id, remoteItem] of remoteMap.entries()) {
         const localItem = localMap.get(id);
         if (!localItem || remoteItem.updatedAt > localItem.updatedAt) {
-          await this.saveItemLocal(uid, remoteItem);
+          await this.localStorage!.saveItem(remoteItem);
           localMap.set(id, remoteItem);
         }
       }
 
       for (const [id, localItem] of localMap.entries()) {
-        if (!remoteMap.has(id) && !localItem.deleted) {
-          await this.saveItemLocal(uid, { ...localItem, deleted: true, updatedAt: Date.now() });
-          await this.addPending(uid, id);
+        const remoteItem = remoteMap.get(id);
+        if (!remoteItem && !localItem.deleted) {
+          await setDoc(doc(this.firestore, 'carts', uid, 'items', id), localItem);
+        } else if (remoteItem && localItem.updatedAt > remoteItem.updatedAt && !localItem.deleted) {
+          await setDoc(doc(this.firestore, 'carts', uid, 'items', id), localItem);
         }
       }
 
@@ -380,4 +272,3 @@ export class CartRepository {
   }
 
 }
-
