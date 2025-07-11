@@ -26,11 +26,13 @@ export class CartService {
   private db: SQLiteDBConnection | null = null;
   private dbName = '';
   private cartItems$ = new BehaviorSubject<CartItem[]>([]);
+  private pendingRemoteClear = false;
 
   constructor() {
     authState(this.auth).subscribe(async user => {
       if (user) {
         await this.loadLocalCart(user.uid);
+        await this.loadPendingFlag(user.uid);
         this.sync();
       } else {
         this.cartItems$.next([]);
@@ -51,6 +53,25 @@ export class CartService {
 
   private async getStore(uid: string) {
     return localforage.createInstance({ name: 'cart', storeName: `cart_${uid}` });
+  }
+
+  private async getMetaStore(uid: string) {
+    return localforage.createInstance({ name: 'cart_meta', storeName: `cart_meta_${uid}` });
+  }
+
+  private async loadPendingFlag(uid: string) {
+    const store = await this.getMetaStore(uid);
+    this.pendingRemoteClear = (await store.getItem<boolean>('pendingClear')) ?? false;
+  }
+
+  private async setPendingFlag(uid: string, value: boolean) {
+    const store = await this.getMetaStore(uid);
+    if (value) {
+      await store.setItem('pendingClear', true);
+    } else {
+      await store.removeItem('pendingClear');
+    }
+    this.pendingRemoteClear = value;
   }
   
   private async openDb(uid: string): Promise<SQLiteDBConnection> {
@@ -218,7 +239,11 @@ export class CartService {
     this.cartItems$.next(items);
     await this.removeItemLocal(uid, productId);
     if (await this.isOnline()) {
-      await deleteDoc(doc(this.firestore, 'carts', uid, 'items', productId));
+      try {
+        await deleteDoc(doc(this.firestore, 'carts', uid, 'items', productId));
+      } catch (err) {
+        console.error('Failed to remove item remotely:', err);
+      }
     }
   }
 
@@ -227,10 +252,18 @@ export class CartService {
     this.cartItems$.next([]);
     await this.clearLocal(uid);
     if (await this.isOnline()) {
-      const itemsRef = collection(this.firestore, 'carts', uid, 'items');
-      const snapshot = await getDocs(itemsRef);
-      const promises = snapshot.docs.map(d => deleteDoc(d.ref));
-      await Promise.all(promises);
+      try {
+        const itemsRef = collection(this.firestore, 'carts', uid, 'items');
+        const snapshot = await getDocs(itemsRef);
+        const promises = snapshot.docs.map(d => deleteDoc(d.ref));
+        await Promise.all(promises);
+        await this.setPendingFlag(uid, false);
+      } catch (err) {
+        console.error('Failed to clear remote cart:', err);
+        await this.setPendingFlag(uid, true);
+      }
+    } else {
+      await this.setPendingFlag(uid, true);
     }
   }
   async waitForAuth(timeoutMs = 5000): Promise<void> {
@@ -264,6 +297,19 @@ export class CartService {
 
       const uid = await this.getUid();
       if (!uid) return;
+
+      if (this.pendingRemoteClear) {
+        try {
+          const itemsRef = collection(this.firestore, 'carts', uid, 'items');
+          const snapshot = await getDocs(itemsRef);
+          const promises = snapshot.docs.map(d => deleteDoc(d.ref));
+          await Promise.all(promises);
+          await this.setPendingFlag(uid, false);
+        } catch (err) {
+          console.error('Failed to clear pending remote cart:', err);
+          return; // avoid uploading items if clear failed
+        }
+      }
 
       const localItems = this.cartItems$.value;
       const itemsRef = collection(this.firestore, 'carts', uid, 'items');

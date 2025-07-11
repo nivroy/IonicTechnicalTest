@@ -10,12 +10,14 @@ import {
 import { BehaviorSubject, Observable } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 import { setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { CartService } from './cart.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   private auth = inject(Auth);
+  private cartService = inject(CartService);
 
   // undefined = aún no cargado, null = no logueado, User = logueado
   private userSubject = new BehaviorSubject<User | null | undefined>(undefined);
@@ -61,7 +63,12 @@ export class AuthService {
   }
 
   /** Logout del usuario */
-  logout() {
+  async logout() {
+    try {
+      await this.cartService.clearCart();
+    } catch (e) {
+      console.warn('Error clearing cart on logout:', e);
+    }
     return signOut(this.auth);
   }
 
