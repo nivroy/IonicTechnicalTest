@@ -4,6 +4,7 @@ import { IonicModule, AlertController, ToastController } from '@ionic/angular';
 import { ProductsService, Product } from '../../services/products.service';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
+import { Network } from '@capacitor/network';
 import { RouterModule } from '@angular/router';
 import { Router } from '@angular/router';
 import { Observable } from 'rxjs';
@@ -56,6 +57,16 @@ export class ProductsPage implements OnInit {
   }
 
   async buyNow(product: Product) {
+    const status = await Network.getStatus();
+    if (!status.connected) {
+      const alert = await this.alertCtrl.create({
+        header: 'Sin conexión',
+        message: 'Necesitas conexión a internet para completar tu compra.',
+        buttons: ['OK'],
+      });
+      await alert.present();
+      return;
+    }
     await this.cartService.removeItem(product.id!);
     const alert = await this.alertCtrl.create({
       header: 'Compra',
