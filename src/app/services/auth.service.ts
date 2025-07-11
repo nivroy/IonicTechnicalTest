@@ -1,8 +1,15 @@
 import { Injectable, inject } from '@angular/core';
-import { Auth, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from '@angular/fire/auth';
-import { authState } from '@angular/fire/auth';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import {
+  Auth,
+  User,
+  signInWithEmailAndPassword,
+  signOut,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged
+} from '@angular/fire/auth';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { filter, map } from 'rxjs/operators';
+import { setPersistence, indexedDBLocalPersistence } from 'firebase/auth';
 
 @Injectable({
   providedIn: 'root'
@@ -10,20 +17,55 @@ import { map } from 'rxjs/operators';
 export class AuthService {
   private auth = inject(Auth);
 
+  // undefined = aún no cargado, null = no logueado, User = logueado
+  private userSubject = new BehaviorSubject<User | null | undefined>(undefined);
+
+  
+  constructor() {
+    onAuthStateChanged(this.auth, (user) => {
+      this.userSubject.next(user);
+    });
+
+    setPersistence(this.auth, indexedDBLocalPersistence).catch((error) => {
+      console.error('Error al establecer la persistencia:', error);
+    });
+  }
+
+  /** Observable que emite true/false si el usuario está autenticado */
+  isAuthenticated(): Observable<boolean> {
+    return this.userSubject.asObservable().pipe(map(user => !!user));
+  }
+
+  
+  waitForAuthReady(): Observable<User | null> {
+    return this.userSubject.asObservable().pipe(
+      filter((user): user is User | null => user !== undefined)
+    );
+  }
+
+  /** Devuelve el usuario actual (o null si no hay sesión) */
+  getCurrentUser(): User | null {
+    return this.userSubject.value ?? null;
+  }
+
+  /** Devuelve el UID si hay usuario logueado */
+  getUid(): string | null {
+    return this.userSubject.value?.uid ?? null;
+  }
+
+  /** Login con email y contraseña */
   login(email: string, password: string) {
     return signInWithEmailAndPassword(this.auth, email, password);
   }
 
-  isAuthenticated(): Observable<boolean> {
-    return authState(this.auth).pipe(map(user => !!user));
-  }
-
+  /** Logout del usuario */
   logout() {
     return signOut(this.auth);
   }
 
+  /** Registro con email y contraseña */
   register(email: string, password: string) {
     return createUserWithEmailAndPassword(this.auth, email, password);
   }
-  
+
 }

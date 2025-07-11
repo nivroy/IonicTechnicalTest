@@ -7,6 +7,7 @@ import { Capacitor } from '@capacitor/core';
 import { Network } from '@capacitor/network';
 import { SQLiteConnection, SQLiteDBConnection, CapacitorSQLite } from '@capacitor-community/sqlite';
 import localforage from 'localforage';
+import { onAuthStateChanged } from 'firebase/auth';
 
 export interface CartItem {
   productId: string;
@@ -75,9 +76,11 @@ export class CartService {
     if (Capacitor.getPlatform() === 'web') {
       const store = await this.getStore(uid);
       const keys = await store.keys();
-      const items = (await Promise.all(keys.map(k => store.getItem<CartItem>(k)))).filter(
-        (i): i is CartItem => !!i
-      );
+      const items = (
+        await Promise.all(
+          keys.map((k: string) => store.getItem<CartItem>(k))
+        )
+      ).filter((i: CartItem | null): i is CartItem => !!i);
       this.cartItems$.next(items);
     } else {
       const db = await this.openDb(uid);
@@ -176,21 +179,54 @@ export class CartService {
       await Promise.all(promises);
     }
   }
+  async waitForAuth(timeoutMs = 5000): Promise<void> {
+    const start = Date.now();
+
+    return new Promise<void>((resolve, reject) => {
+      const unsubscribe = onAuthStateChanged(this.auth, user => {
+        if (user) {
+          unsubscribe();
+          resolve();
+        } else if (Date.now() - start >= timeoutMs) {
+          unsubscribe();
+          reject(new Error('Auth state timeout'));
+        }
+      });
+
+      // Fallback timeout
+      setTimeout(() => {
+        unsubscribe();
+        reject(new Error('Auth state timeout'));
+      }, timeoutMs);
+    });
+  }
 
   async sync() {
-    if (!(await this.isOnline())) return;
-    const uid = await this.getUid();
-    const localItems = this.cartItems$.value;
-    const itemsRef = collection(this.firestore, 'carts', uid, 'items');
-    const snapshot = await getDocs(itemsRef);
-    const remoteIds = new Set(snapshot.docs.map(d => d.id));
-    for (const item of localItems) {
-      await setDoc(doc(this.firestore, 'carts', uid, 'items', item.productId), item);
-      remoteIds.delete(item.productId);
-    }
-    for (const id of remoteIds) {
-      await deleteDoc(doc(this.firestore, 'carts', uid, 'items', id));
+    try {
+      if (!(await this.isOnline())) return;
+
+      await this.waitForAuth(); // 👈 Esperar hasta que Firebase esté listo
+
+      const uid = await this.getUid();
+      if (!uid) return;
+
+      const localItems = this.cartItems$.value;
+      const itemsRef = collection(this.firestore, 'carts', uid, 'items');
+      const snapshot = await getDocs(itemsRef);
+      const remoteIds = new Set(snapshot.docs.map(d => d.id));
+
+      for (const item of localItems) {
+        await setDoc(doc(this.firestore, 'carts', uid, 'items', item.productId), item);
+        remoteIds.delete(item.productId);
+      }
+
+      for (const id of remoteIds) {
+        await deleteDoc(doc(this.firestore, 'carts', uid, 'items', id));
+      }
+    } catch (err) {
+      console.error('Sync failed:', err);
     }
   }
+
 }
 
