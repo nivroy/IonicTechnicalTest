@@ -1,15 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Firestore, collection, collectionData, doc, getDoc } from '@angular/fire/firestore';
 import { Observable, from, map } from 'rxjs';
-
-export interface Product {
-  nombre: string;
-  descripcion: string;
-  precio: number;
-  stock: number;
-  imagen: string;
-  id?: string;
-}
+import { Product } from '../models/product.model';
 
 @Injectable({ providedIn: 'root' })
 export class ProductsService {

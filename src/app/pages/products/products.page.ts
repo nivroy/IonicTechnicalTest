@@ -1,7 +1,8 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, AlertController, ToastController } from '@ionic/angular';
-import { ProductsService, Product } from '../../services/products.service';
+import { ProductsService } from '../../services/products.service';
+import { Product } from '../../models/product.model';
 import { AuthService } from '../../services/auth.service';
 import { CartService } from '../../services/cart.service';
 import { Network } from '@capacitor/network';
