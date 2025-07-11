@@ -4,7 +4,8 @@ import { IonicModule, AlertController } from '@ionic/angular';
 import { RouterModule, Router } from '@angular/router';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { CartService, CartItem } from '../../services/cart.service';
+import { CartService } from '../../services/cart.service';
+import { CartItem } from '../../models/cart-item.model';
 import { AuthService } from '../../services/auth.service';
 import { SyncService } from '../../services/sync.service';
 import { Network } from '@capacitor/network';
@@ -29,7 +30,7 @@ export class CartPage implements OnInit {
   ngOnInit() {
     this.cartItems$ = this.cartService.getCartItems();
     this.total$ = this.cartItems$.pipe(
-      map(items => items.reduce((acc, i) => acc + i.precio * i.cantidad, 0))
+      map(items => items.reduce((acc, i) => acc + i.price * i.quantity, 0))
     );
   }
 
