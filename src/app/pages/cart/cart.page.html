@@ -9,13 +9,13 @@
     <ion-list *ngIf="items.length > 0; else empty">
       <ion-item class="cart-item" *ngFor="let item of items">
         <ion-thumbnail slot="start">
-          <img [src]="item.imagen" />
+          <img [src]="item.image" />
         </ion-thumbnail>
         <ion-label class="cart-item-label">
-          <h2 class="item-name">{{ item.nombre }}</h2>
-          <p class="item-info">Precio: {{ item.precio | currency:'USD' }}</p>
-          <p class="item-info">Cantidad: {{ item.cantidad }}</p>
-          <p class="item-info">Total: {{ item.precio * item.cantidad | currency:'USD' }}</p>
+          <h2 class="item-name">{{ item.name }}</h2>
+          <p class="item-info">Precio: {{ item.price | currency:'USD' }}</p>
+          <p class="item-info">Cantidad: {{ item.quantity }}</p>
+          <p class="item-info">Total: {{ item.price * item.quantity | currency:'USD' }}</p>
         </ion-label>
         <ion-button fill="clear" [routerLink]="'/product/' + item.productId">
           <ion-icon slot="icon-only" name="eye-outline"></ion-icon>

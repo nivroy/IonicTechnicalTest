@@ -30,7 +30,7 @@ export class CartPage implements OnInit {
   ngOnInit() {
     this.cartItems$ = this.cartService.getCartItems();
     this.total$ = this.cartItems$.pipe(
-      map(items => items.reduce((acc, i) => acc + i.precio * i.cantidad, 0))
+      map(items => items.reduce((acc, i) => acc + i.price * i.quantity, 0))
     );
   }
 
