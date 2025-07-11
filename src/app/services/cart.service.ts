@@ -52,25 +52,79 @@ export class CartService {
   private async getStore(uid: string) {
     return localforage.createInstance({ name: 'cart', storeName: `cart_${uid}` });
   }
-
+  
   private async openDb(uid: string): Promise<SQLiteDBConnection> {
     if (!this.sqlite) {
       this.sqlite = new SQLiteConnection(CapacitorSQLite);
     }
-    if (this.db && this.dbName === uid) {
+
+    const dbName = `cart_${uid}`;
+
+    if (this.db && this.dbName === dbName) {
       return this.db;
     }
-    if (this.db) {
-      await this.sqlite.closeConnection(this.dbName, false);
+
+    try {
+      const isConn = (await this.sqlite.isConnection(dbName, false)).result;
+
+      if (isConn) {
+        // Recupera la conexión si ya existe
+        this.db = await this.sqlite.retrieveConnection(dbName, false);
+      } else {
+        // Si no existe, crea una nueva
+        this.db = await this.sqlite.createConnection(dbName, false, 'no-encryption', 1, false);
+      }
+
+      this.dbName = dbName;
+
+      await this.db.open();
+
+      await this.db.execute(
+        `CREATE TABLE IF NOT EXISTS items (
+          productId TEXT PRIMARY KEY,
+          nombre TEXT,
+          precio REAL,
+          imagen TEXT,
+          cantidad INTEGER
+        )`
+      );
+
+      return this.db;
+    } catch (error) {
+      console.error('Error opening DB, intentando limpiar:', error);
+
+      // Intentamos cerrar si algo salió mal
+      try {
+        await this.sqlite.closeConnection(dbName, false);
+      } catch (e) {
+        console.warn('No se pudo cerrar la conexión corrupta:', e);
+      }
+
+      // Reintenta creando una nueva conexión
+      try {
+        this.db = await this.sqlite.createConnection(dbName, false, 'no-encryption', 1, false);
+        this.dbName = dbName;
+
+        await this.db.open();
+
+        await this.db.execute(
+          `CREATE TABLE IF NOT EXISTS items (
+            productId TEXT PRIMARY KEY,
+            nombre TEXT,
+            precio REAL,
+            imagen TEXT,
+            cantidad INTEGER
+          )`
+        );
+
+        return this.db;
+      } catch (finalError) {
+        console.error('Error final al abrir DB después de limpiar:', finalError);
+        throw finalError;
+      }
     }
-    this.dbName = `cart_${uid}`;
-    this.db = await this.sqlite.createConnection(this.dbName, false, 'no-encryption', 1, false);
-    await this.db.open();
-    await this.db.execute(
-      `CREATE TABLE IF NOT EXISTS items (productId TEXT PRIMARY KEY, nombre TEXT, precio REAL, imagen TEXT, cantidad INTEGER)`
-    );
-    return this.db;
   }
+
 
   private async loadLocalCart(uid: string) {
     if (Capacitor.getPlatform() === 'web') {
@@ -184,6 +238,7 @@ export class CartService {
 
     return new Promise<void>((resolve, reject) => {
       const unsubscribe = onAuthStateChanged(this.auth, user => {
+        console.log('Auth state changed:', user);
         if (user) {
           unsubscribe();
           resolve();

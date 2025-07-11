@@ -9,7 +9,7 @@ import {
 } from '@angular/fire/auth';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
-import { setPersistence, indexedDBLocalPersistence } from 'firebase/auth';
+import { setPersistence, browserLocalPersistence } from 'firebase/auth';
 
 @Injectable({
   providedIn: 'root'
@@ -22,13 +22,15 @@ export class AuthService {
 
   
   constructor() {
-    onAuthStateChanged(this.auth, (user) => {
-      this.userSubject.next(user);
-    });
-
-    setPersistence(this.auth, indexedDBLocalPersistence).catch((error) => {
-      console.error('Error al establecer la persistencia:', error);
-    });
+    setPersistence(this.auth, browserLocalPersistence)
+      .then(() => {
+        onAuthStateChanged(this.auth, (user) => {
+          this.userSubject.next(user);
+        });
+      })
+      .catch((error) => {
+        console.error('Error al establecer la persistencia:', error);
+      });
   }
 
   /** Observable que emite true/false si el usuario está autenticado */
